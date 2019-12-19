@@ -1,0 +1,11 @@
+{
+  "name": "nsw-rfs-majorincidents-timeseries",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Andrew Harvey <andrew@beyondtracks.com>",
+  "license": "MIT",
+  "dependencies": {
+    "minimist": "^1.2.0",
+    "nodegit": "^0.26.3"
+  }
+}

@@ -10,8 +10,8 @@ const fs = require('fs');
 git.plugins.set('fs', fs)
 const argv = require('minimist')(process.argv.slice(2));
 
-if (argv._.length === 0) {
-    console.error('Usage: ./index.js <pathToRepo>');
+if (argv._.length === 0 || argv.help || argv.h) {
+    console.error('Usage: ./index.js [--start="YYYY-MM-DD"] [--end="YYYY-MM-DD"] <pathToArchiveRepo>');
     process.exit(1);
 }
 

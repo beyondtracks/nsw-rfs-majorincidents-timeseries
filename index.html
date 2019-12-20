@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Create a time slider</title>
+        <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+        <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.js"></script>
+        <link href="https://api.tiles.mapbox.com/mapbox-gl-js/v1.6.1/mapbox-gl.css" rel="stylesheet" />
+        <style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; };
+        </style>
+    </head>
+    <body>
+        <style>
+.map-overlay {
+    font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+    position: absolute;
+    width: 25%;
+    top: 0;
+    left: 0;
+    padding: 10px;
+}
+
+.map-overlay .map-overlay-inner {
+    background-color: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.map-overlay h2 {
+    line-height: 24px;
+    display: block;
+    margin: 0 0 10px;
+}
+
+.map-overlay input {
+    background-color: transparent;
+    display: inline-block;
+    width: 100%;
+    position: relative;
+    margin: 0;
+    cursor: ew-resize;
+}
+
+        .attribution {
+            text-size: small;
+            font-style: italic;
+        }
+
+        #slider-box {
+            display: flex;
+        }
+        #play {
+            float: left;
+            display: inline;
+            margin-right: 5px;
+        }
+        #slider {
+            float: right;
+            display: inline;
+        }
+        </style>
+
+        <div id="map"></div>
+
+        <div class="map-overlay top">
+            <div class="map-overlay-inner">
+                <h2>NSW Bushfire Current Incidents</h2>
+                <div id="slider-box"><button id="play">Play</button></div>
+                <label id="date"></label>
+                <hr />
+                <span class="attribution">Current Incidents data is © State of New South Wales (NSW Rural Fire Service). For current information go to www.rfs.nsw.gov.au. Licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0).</span>
+            </div>
+        </div>
+        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script>
+            mapboxgl.accessToken = 'pk.eyJ1IjoiYWxhbnRnZW8tcHJlc2FsZXMiLCJhIjoiY2pxcmZ1cW1mMG1tcDN4bDVvYzA4MWg5MyJ9.7QtVj_0ythHwEg1n_zaRTQ';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/outdoors-v11',
+    center: [150.78, -33.503],
+    zoom: 7,
+    hash: true
+});
+
+var prevInput = null;
+map.on('load', function() {
+    map.addSource('ts', {
+        type: 'geojson',
+        data: 'ts.geojson'
+    });
+    map.addLayer({
+        id: 'fill',
+        type: 'fill',
+        source: 'ts',
+        paint: {
+            'fill-color': '#ff0000',
+            'fill-opacity': [
+                'case',
+                ['to-boolean', ['feature-state', 'active']],
+                0.4,
+                0
+            ]
+        }
+    });
+    map.addLayer({
+        id: 'line',
+        type: 'line',
+        source: 'ts',
+        paint: {
+            'line-color': '#ff0000',
+            'line-width': 2,
+            'line-opacity': [
+                'case',
+                ['to-boolean', ['feature-state', 'active']],
+                1,
+                0
+            ]
+        }
+    });
+
+    d3.json('timestamps.json', function (err, ts) {
+        var tsKeys = Object.keys(ts);
+
+        var slider = document.createElement('input');
+        slider.id = 'slider';
+        slider.type = 'range';
+        slider.min = 0;
+        slider.max = tsKeys.length - 1;
+        slider.step = 1;
+        slider.value = 0;
+
+        document.getElementById('slider-box').appendChild(slider);
+
+        var interval;
+        document.getElementById('play').addEventListener('click', function (e) {
+
+            if (document.getElementById('play').innerHTML === 'Play') {
+                // play
+                document.getElementById('play').innerHTML = 'Pause';
+                interval = window.setInterval(function () {
+                    var value = Number(slider.value);
+                    var max = Number(slider.max);
+                    if (value < max) {
+                        slider.value = value + 1;
+                    } else {
+                        slider.value = 0;
+                    }
+                    sliderInput(Number(slider.value));
+                }, 10);
+            } else {
+                // pause
+                document.getElementById('play').innerHTML = 'Play';
+                if (interval) {
+                    window.clearInterval(interval);
+                    interval = null;
+                }
+            }
+        });
+
+        slider.addEventListener('input', function (e) { sliderInput(Number(e.target.value)); });
+        function sliderInput (value) {
+            var prevKey = tsKeys[prevInput];
+            var prevValue = ts[prevKey] || [];
+
+            var nextKey = tsKeys[value];
+            var nextValue = ts[nextKey];
+
+            document.getElementById('date').innerText = (new Date(nextKey * 1000)).toString();
+
+            prevValue.forEach(function (i) {
+                if (nextValue.indexOf(i) === -1) { // not found in next
+                    map.setFeatureState({
+                        source: 'ts',
+                        id: i
+                    }, {
+                        active: false
+                    });
+                }
+            });
+
+            nextValue.forEach(function (i) {
+                if (prevValue.indexOf(i) === -1) { // not found in prev
+                    map.setFeatureState({
+                        source: 'ts',
+                        id: i
+                    }, {
+                        active: true
+                    });
+                }
+            });
+
+            prevInput = value;
+        }
+    });
+});
+        </script>
+
+    </body>
+</html>

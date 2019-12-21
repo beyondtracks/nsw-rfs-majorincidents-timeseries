@@ -24,6 +24,14 @@ An Object where the keys are timestamps in unix time, and the values are an arra
 
 - `timeseries.ndgeojson` which contains a newline-delimited GeoJSON of the timeseries geometries
 
+You can then either convert this to MBTiles to upload as a Mapbox Tileset:
+
+    tippecanoe --force --output timeseries.mbtiles -l timeseries timeseries.ndgeojson
+
+...or you can convert to GeoJSON with:
+
+    ogr2ogr -f GeoJSON -preserve_fid timeseries.geojson timeseries.ndgeojson
+
 ## Frontend
 
 A sample visualisation web page using Mapbox GL JS contained at [`index.html`](https://github.com/beyondtracks/nsw-rfs-majorincidents-timeseries/blob/master/index.html). The app uses [`feature-states`](https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-feature-state) to very efficiently animate the data.

@@ -8,10 +8,10 @@ const equal = require('fast-deep-equal');
 const { DateTime } = require('luxon');
 const fs = require('fs');
 git.plugins.set('fs', fs)
-const argv = require('minimist')(process.argv.slice(2));
+const argv = require('minimist')(process.argv.slice(2), { boolean: ['help', 'incremental'] });
 
 if (argv._.length === 0 || argv.help || argv.h) {
-    console.error('Usage: ./index.js [--start="YYYY-MM-DD"] [--end="YYYY-MM-DD"] <pathToArchiveRepo>');
+    console.error('Usage: ./index.js [--incremental] [--start="YYYY-MM-DD"] [--end="YYYY-MM-DD"] <pathToArchiveRepo>');
     process.exit(1);
 }
 
@@ -28,24 +28,33 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
      * gvi - > Geometry Varient Index
      */
 
+    // if running in incremental update mode and an existing metadata.json exists then use it, otherwise start from scatch
+    const metadata = (argv.incremental && fs.existsSync('metadata.json')) ? JSON.parse(fs.readFileSync('metadata.json')) : {};
+
     // store the geometry variants for each feature
     // fid -> [gv, ...]
-    const geomVariants = {};
+    const geomVariants = metadata.geomVariants || {};
     
     // for each time series index, store which feature and geometry variant should be shown
     // tsi -> [[fid, gvi], ...]
-    const tsGeoms = {};
+    const timestamps = (argv.incremental && fs.existsSync('timestamps.json')) ? JSON.parse(fs.readFileSync('timestamps.json')) : {};
 
     // a new global unique id that combines the original feature id and the the geometry variant index
     // "fid.gvi" => guid
-    const guids = {};
+    const guids = metadata.guids || {};
 
-    // a mapping of time series index -> feature ids to show
+    // a set of guid's added this session so we can do incremental updates to the timeseries output
+    const newGuids = new Set();
 
     for (const commit of _.reverse(commits)) {
         try {
             // time series index
             const tsi = Number(commit.committer.timestamp);
+
+            if (tsi.toString() in timestamps) {
+                // skip existing timestamp
+                continue;
+            }
 
             const start = argv.start && DateTime.fromISO(argv.start);
             const end = argv.end && DateTime.fromISO(argv.end);
@@ -55,7 +64,7 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
                 (!start || !end) ||
                 (current >= start.startOf('day') && current <= end.endOf('day'))
             ) {
-                tsGeoms[tsi] = [];
+                timestamps[tsi] = [];
 
                 const { object: blob} = await git.readObject({ dir, oid: commit.oid, filepath })
                 const geojson = JSON.parse(blob.toString('utf8'));
@@ -77,9 +86,10 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
                             } else {
                                 guid = Object.keys(guids).length;
                                 guids[`${feature.id}.${prevIndex}`] = guid;
+                                newGuids.add(guid);
                             }
 
-                            tsGeoms[tsi].push(guid);
+                            timestamps[tsi].push(guid);
                         } else {
                             // this geometry is different, so add it
                             const length = geomVariants[feature.id].push(feature.geometry);
@@ -90,9 +100,10 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
                             } else {
                                 guid = Object.keys(guids).length;
                                 guids[`${feature.id}.${length - 1}`] = guid;
+                                newGuids.add(guid);
                             }
 
-                            tsGeoms[tsi].push(guid);
+                            timestamps[tsi].push(guid);
                         }
                     } else {
                         // this feature not yet found, so add it
@@ -100,8 +111,9 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
 
                         const guid = Object.keys(guids).length;
                         guids[`${feature.id}.0`] = guid;
+                        newGuids.add(guid);
 
-                        tsGeoms[tsi].push(guid);
+                        timestamps[tsi].push(guid);
 
                         geomVariantsAddedThisTime++;
                     }
@@ -115,20 +127,36 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
         }
     }
 
+    fs.writeFile('timestamps.json', JSON.stringify(timestamps), (err) => {
+        if (err) {
+            throw err;
+        } else {
+            process.stderr.write(`Updated timestamps.json\n`);
+        }
+    });
+    fs.writeFile('metadata.json', JSON.stringify({guids, geomVariants}), (err) => {
+        if (err) {
+            throw err;
+        } else {
+            process.stderr.write(`Updated metadata.json\n`);
+        }
+    });
+
     Object.entries(geomVariants).forEach(([fid, variants]) => {
         variants.forEach((variant, index) => {
             const id = guids[`${fid}.${index}`];
-            const feature = {
-                type: 'Feature',
-                id: id,
-                properties: {},
-                geometry: variant
-            };
-            console.log(JSON.stringify(feature));
+            if (newGuids.has(id)) {
+                const feature = {
+                    type: 'Feature',
+                    id: id,
+                    properties: {},
+                    geometry: variant
+                };
+                console.log(JSON.stringify(feature));
+            }
         });
     });
 
-    fs.writeFileSync('timestamps.json', JSON.stringify(tsGeoms));
 })()
 
 function extractID(guid) {

@@ -32,6 +32,13 @@ You can then either convert this to MBTiles to upload as a Mapbox Tileset:
 
     ogr2ogr -f GeoJSON -preserve_fid timeseries.geojson timeseries.ndgeojson
 
+
+### Incremental updates
+
+After update the archine repository to incrementally update with just the new data use:
+
+    ./index.js --incremental nsw-rfs-majorincidents-archive >> timeseries.ndgeojson
+
 ## Frontend
 
 A sample visualisation web page using Mapbox GL JS contained at [`index.html`](https://github.com/beyondtracks/nsw-rfs-majorincidents-timeseries/blob/master/index.html). The app uses [`feature-states`](https://docs.mapbox.com/mapbox-gl-js/style-spec/#expressions-feature-state) to very efficiently animate the data.

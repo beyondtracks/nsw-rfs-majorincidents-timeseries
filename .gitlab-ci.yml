@@ -1,0 +1,21 @@
+image: "registry.gitlab.com/beyondtracks/beyondtracks-docker:latest"
+
+cache:
+    paths:
+        - nsw-rfs-majorincidents-archive/
+        - node_modules/
+
+stages:
+    - update
+
+update:
+    stage: update
+    script:
+        - npm install
+        - test -d nsw-rfs-majorincidents-archive || git clone https://github.com/beyondtracks/nsw-rfs-majorincidents-archive.git
+        - cd nsw-rfs-majorincidents-archive && git pull && cd ..
+        - ./index.js --incremental nsw-rfs-majorincidents-archive >> timeseries.ndgeojson
+        - tippecanoe --force --attribution "Bushfire data © State of New South Wales (<a href='http://www.rfs.nsw.gov.au/'>NSW Rural Fire Service</a>)" --output timeseries.mbtiles -l timeseries timeseries.ndgeojson
+        - mapbox --access-token "$MAPBOX_ACCESS_TOKEN" upload --name "NSW Bushfire Time Series" "$MAPBOX_TILESET" timeseries.mbtiles
+    only:
+        - master

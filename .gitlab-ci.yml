@@ -4,6 +4,8 @@ cache:
     paths:
         - nsw-rfs-majorincidents-archive/
         - node_modules/
+        - timeseries.ndgeojson
+        - timestamps.json
 
 stages:
     - update

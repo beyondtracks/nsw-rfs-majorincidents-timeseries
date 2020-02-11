@@ -32,7 +32,6 @@ You can then either convert this to MBTiles to upload as a Mapbox Tileset:
 
     ogr2ogr -f GeoJSON -preserve_fid timeseries.geojson timeseries.ndgeojson
 
-
 ### Incremental updates
 
 After update the archine repository to incrementally update with just the new data use:

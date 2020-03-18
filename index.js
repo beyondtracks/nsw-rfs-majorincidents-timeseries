@@ -7,7 +7,6 @@ const _ = require('lodash');
 const equal = require('fast-deep-equal');
 const { DateTime } = require('luxon');
 const fs = require('fs');
-git.plugins.set('fs', fs)
 const argv = require('minimist')(process.argv.slice(2), { boolean: ['help', 'incremental'] });
 
 if (argv._.length === 0 || argv.help || argv.h) {
@@ -19,7 +18,7 @@ const dir = require('path').resolve(argv._[0])
 const filepath = 'nsw-rfs-majorincidents.geojson'
 
 ;(async () => {
-    const commits = await git.log({ dir })
+    const commits = await git.log({ fs, dir })
 
     /*
      * tsi -> Time Series Index

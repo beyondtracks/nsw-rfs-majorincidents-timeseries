@@ -48,7 +48,7 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
     for (const commit of _.reverse(commits)) {
         try {
             // time series index
-            const tsi = Number(commit.committer.timestamp);
+            const tsi = Number(commit.commit.committer.timestamp);
 
             if (tsi.toString() in timestamps) {
                 // skip existing timestamp
@@ -65,8 +65,8 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
             ) {
                 timestamps[tsi] = [];
 
-                const { object: blob} = await git.readObject({ dir, oid: commit.oid, filepath })
-                const geojson = JSON.parse(blob.toString('utf8'));
+                const { blob } = await git.readBlob({ fs, dir, oid: commit.oid, filepath })
+                const geojson = JSON.parse(Buffer.from(blob).toString('utf8'));
 
                 let geomVariantsAddedThisTime = 0;
                 for (const feature of geojson.features) {

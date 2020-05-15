@@ -10,11 +10,14 @@
 
     yarn install
     git clone https://github.com/beyondtracks/nsw-rfs-majorincidents-archive.git
-    ./index.js nsw-rfs-majorincidents-archive > timeseries.ndgeojson
 
-This will process the whole history from the archive, to instead process a date range use:
+To process the whole history from the archive:
 
-    ./index.js --start="2019-12-20" --end="2019-12-20" nsw-rfs-majorincidents-archive > timeseries.ndgeojson
+    node --max-old-space-size=8192 index.js nsw-rfs-majorincidents-archive > timeseries.ndgeojson
+
+Alternativly process withn a date range :
+
+    node --max-old-space-size=8192 index.js --start="2019-12-20" --end="2019-12-20" nsw-rfs-majorincidents-archive > timeseries.ndgeojson
 
 This will output two files:
 

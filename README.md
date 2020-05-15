@@ -14,7 +14,7 @@
 
 This will process the whole history from the archive, to instead process a date range use:
 
-    ./index.js --from="2019-12-20" --to="2019-12-20" nsw-rfs-majorincidents-archive > timeseries.ndgeojson
+    ./index.js --start="2019-12-20" --end="2019-12-20" nsw-rfs-majorincidents-archive > timeseries.ndgeojson
 
 This will output two files:
 

@@ -7,10 +7,10 @@ const _ = require('lodash');
 const equal = require('fast-deep-equal');
 const { DateTime } = require('luxon');
 const fs = require('fs');
-const argv = require('minimist')(process.argv.slice(2), { boolean: ['help', 'incremental'] });
+const argv = require('minimist')(process.argv.slice(2), { boolean: ['help', 'incremental', 'include-timestamps'] });
 
 if (argv._.length === 0 || argv.help || argv.h) {
-    console.error('Usage: ./index.js [--incremental] [--start="YYYY-MM-DD"] [--end="YYYY-MM-DD"] <pathToArchiveRepo>');
+    console.error('Usage: ./index.js [--incremental] [--start="YYYY-MM-DD"] [--end="YYYY-MM-DD"] [--include-timestamps] <pathToArchiveRepo>');
     process.exit(1);
 }
 
@@ -44,6 +44,9 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
 
     // a set of guid's added this session so we can do incremental updates to the timeseries output
     const newGuids = new Set();
+
+    // store the time series indexes for each geometry varient
+    const timestampsPerGeom = {};
 
     for (const commit of _.reverse(commits)) {
         try {
@@ -89,6 +92,13 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
                             }
 
                             timestamps[tsi].push(guid);
+
+                            if (argv['include-timestamps']) {
+                                if (!(guid in timestampsPerGeom)) {
+                                    timestampsPerGeom[guid] = [];
+                                }
+                                timestampsPerGeom[guid].push(tsi)
+                            }
                         } else {
                             // this geometry is different, so add it
                             const length = geomVariants[feature.id].push(feature.geometry);
@@ -151,6 +161,11 @@ const filepath = 'nsw-rfs-majorincidents.geojson'
                     properties: {},
                     geometry: variant
                 };
+                if (argv['include-timestamps']) {
+                    if (id in timestampsPerGeom) {
+                        feature.properties.time = timestampsPerGeom[id].join(',')
+                    }
+                }
                 console.log(JSON.stringify(feature));
             }
         });
